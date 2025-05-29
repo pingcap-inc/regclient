@@ -186,3 +186,9 @@ Available Commands:
 ## Usage
 
 See the [project documentation](docs/README.md).
+
+## More
+Go command line to build binary:
+```
+GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags "-s -w -extldflags -static -buildid=" -tags nolegacy -o artifacts/regsync-cloud-darwin-arm64 ./cmd/regsync-cloud
+```
