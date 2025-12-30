@@ -4,12 +4,12 @@ package auth
 import "fmt"
 
 type acrAuth struct {
-	Reg     string
+	Reg string
 }
 
 func NewAcrAuth(reg string) (Authenticator, error) {
 	return acrAuth{
-		Reg:     reg,
+		Reg: reg,
 	}, nil
 }
 
