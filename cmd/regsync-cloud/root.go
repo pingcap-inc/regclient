@@ -39,11 +39,12 @@ More details at https://github.com/regclient/regclient`
 )
 
 var rootOpts struct {
-	confFile  string
-	verbosity string
-	logopts   []string
-	format    string // for Go template formatting of various commands
-	isCloud   bool
+	confFile     string
+	verbosity    string
+	logopts      []string
+	ignoreErrors []string
+	format       string // for Go template formatting of various commands
+	isCloud      bool
 }
 
 var (
@@ -108,6 +109,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&rootOpts.confFile, "config", "c", "", "Config file")
 	rootCmd.PersistentFlags().StringVarP(&rootOpts.verbosity, "verbosity", "v", logrus.InfoLevel.String(), "Log level (debug, info, warn, error, fatal, panic)")
 	rootCmd.PersistentFlags().StringArrayVar(&rootOpts.logopts, "logopt", []string{}, "Log options")
+	rootCmd.PersistentFlags().StringArrayVar(&rootOpts.ignoreErrors, "ignore", []string{}, "Errors to ignore")
 	rootCmd.PersistentFlags().BoolVar(&rootOpts.isCloud, "cloud", false, "cloud container registry sync for dbaas")
 	versionCmd.Flags().StringVarP(&rootOpts.format, "format", "", "{{printPretty .}}", "Format output with go template syntax")
 
@@ -144,6 +146,21 @@ func runVersion(cmd *cobra.Command, args []string) error {
 	return template.Writer(os.Stdout, rootOpts.format, info)
 }
 
+func isCriticalError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	errMsg := err.Error()
+	for _, keyword := range rootOpts.ignoreErrors {
+		if strings.Contains(errMsg, keyword) {
+			return false
+		}
+	}
+
+	return true
+}
+
 // runOnce processes the file in one pass, ignoring cron
 func runOnce(cmd *cobra.Command, args []string) error {
 	err := loadConf()
@@ -169,7 +186,7 @@ func runOnce(cmd *cobra.Command, args []string) error {
 			go func() {
 				defer wg.Done()
 				err := s.process(ctx, "copy")
-				if err != nil {
+				if isCriticalError(err) {
 					if mainErr == nil {
 						mainErr = err
 					}
@@ -178,7 +195,7 @@ func runOnce(cmd *cobra.Command, args []string) error {
 			}()
 		} else {
 			err := s.process(ctx, "copy")
-			if err != nil {
+			if isCriticalError(err) {
 				if mainErr == nil {
 					mainErr = err
 				}
